@@ -1,0 +1,80 @@
+# ==============================
+# Python
+# ==============================
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# Virtual environments
+venv/
+.env/
+.venv/
+ENV/
+env/
+
+# ==============================
+# OS / Editor junk
+# ==============================
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.vscode/
+.idea/
+
+# ==============================
+# Jupyter / Experiments
+# ==============================
+.ipynb_checkpoints/
+
+# ==============================
+# Logs & runtime files
+# ==============================
+*.log
+
+# ==============================
+# ML / Model artifacts (DO NOT COMMIT)
+# ==============================
+*.pt
+*.pth
+*.bin
+*.ckpt
+*.safetensors
+*.h5
+*.onnx
+
+# HuggingFace / Transformers caches
+.cache/
+hf_cache/
+transformers_cache/
+
+# ==============================
+# Project-specific generated files
+# ==============================
+processed.pt
+processed_test.pt
+model_test/model.safetensors
+
+# Ignore entire trained model directory (optional but recommended)
+model_test/
+
+# ==============================
+# Dataset safety (uncomment if needed)
+# ==============================
+# data/*.csv
+# data/*.json
+
+# ==============================
+# Packaging
+# ==============================
+build/
+dist/
+*.egg-info/
+
+# ==============================
+# Misc
+# ==============================
+*.tmp
+*.bak
