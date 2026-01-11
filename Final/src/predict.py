@@ -4,6 +4,10 @@ import torch
 from transformers import DistilBertForSequenceClassification, DistilBertTokenizerFast
 import torch.nn.functional as F
 
+# --------- GLOBAL MODEL (for API / Apify usage) ----------
+_MODEL = None
+_TOKENIZER = None
+_DEVICE = torch.device('cpu')
 
 def load_model(model_dir: Path, tokenizer_name: str):
     # If model_dir exists and contains pretrained model, load from there
@@ -17,6 +21,24 @@ def load_model(model_dir: Path, tokenizer_name: str):
         model = DistilBertForSequenceClassification.from_pretrained(tokenizer_name, num_labels=2)
     model.eval()
     return tokenizer, model
+
+def get_model_and_tokenizer(
+    model_dir: str = None,
+    tokenizer_name: str = 'distilbert-base-uncased'
+):
+    global _MODEL, _TOKENIZER
+
+    if model_dir is None:
+        # Resolve path RELATIVE to this file (bulletproof)
+        model_dir = Path(__file__).resolve().parent.parent / 'model_test'
+
+    if _MODEL is None or _TOKENIZER is None:
+        tokenizer, model = load_model(model_dir, tokenizer_name)
+        model.to(_DEVICE)
+        _TOKENIZER = tokenizer
+        _MODEL = model
+
+    return _TOKENIZER, _MODEL
 
 
 def predict_texts(texts, tokenizer, model, max_length: int = 128, device='cpu'):
@@ -33,10 +55,22 @@ def predict_texts(texts, tokenizer, model, max_length: int = 128, device='cpu'):
         results.append({'text': texts[i], 'pred': int(preds[i].item()), 'prob': float(probs[i, preds[i]].item()), 'probs': probs[i].tolist()})
     return results
 
+def predict_text(text: str):
+    tokenizer, model = get_model_and_tokenizer()
+
+    results = predict_texts(
+        [text],          # predict_texts expects a LIST
+        tokenizer,
+        model,
+        device=_DEVICE
+    )
+
+    pred = results[0]['pred']
+    return 'suicidal' if pred == 1 else 'non-suicidal'
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--model_dir', type=str, default='model')
+    parser.add_argument('--model_dir', type=str, default='model_test')
     parser.add_argument('--tokenizer', type=str, default='distilbert-base-uncased')
     parser.add_argument('--text', type=str, help='Single input text')
     parser.add_argument('--file', type=str, help='Path to a text file with one example per line')
