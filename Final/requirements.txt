@@ -3,3 +3,5 @@ torch>=1.7.0
 pandas
 scikit-learn
 tqdm
+apify-client
+python-dotenv==1.2.1
