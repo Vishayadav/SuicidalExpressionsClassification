@@ -5,3 +5,8 @@ scikit-learn
 tqdm
 apify-client
 python-dotenv==1.2.1
+shap
+numpy 
+sentencepiece 
+regex 
+matplotlib

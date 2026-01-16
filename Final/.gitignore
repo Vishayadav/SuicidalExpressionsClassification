@@ -9,7 +9,7 @@ __pycache__/
 
 # Virtual environments
 venv/
-.env/
+.env
 .venv/
 ENV/
 env/
@@ -45,7 +45,9 @@ Thumbs.db
 *.h5
 *.onnx
 
+# ==============================
 # HuggingFace / Transformers caches
+# ==============================
 .cache/
 hf_cache/
 transformers_cache/
@@ -78,3 +80,8 @@ dist/
 # ==============================
 *.tmp
 *.bak
+
+# ==============================
+# SHAP output
+# ==============================
+shap_html/
