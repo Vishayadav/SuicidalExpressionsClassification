@@ -7,7 +7,9 @@ import os
 
 # 🆕 ADDED (SHAP)
 import shap
-from shap_utils import get_predict_proba, get_shap_explainer
+# from shap_utils import get_predict_proba, get_shap_explainer
+from src.shap_utils import get_predict_proba, get_shap_explainer
+
 
 # --------- GLOBAL MODEL (for API / Apify usage) ----------
 _MODEL = None

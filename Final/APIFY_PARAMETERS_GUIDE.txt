@@ -1,0 +1,47 @@
+"""
+Apify Instagram Comment Scraper - Parameter Reference Guide
+
+Based on common Apify patterns, the Instagram comment scraper likely supports:
+
+MAIN PARAMETERS:
+- directUrls: array of Instagram post URLs (REQUIRED)
+- resultsLimit: maximum number of comments to fetch (default: probably 20-30)
+- commentsLimit: alternative parameter name for max comments
+- maxScrolls: number of scroll operations to perform (increases comments fetched)
+- pageLimit: number of pages to process
+
+The issue we're experiencing:
+- Requesting 26 comments, getting only 12
+- This suggests resultsLimit might have a low default or the parameter isn't working
+
+SOLUTION STRATEGIES:
+1. Increase maxScrolls to force more scrolling
+2. Use pagination parameters
+3. Try different parameter names (commentsLimit vs resultsLimit)
+4. Call the actor multiple times and aggregate results
+5. Check if there's a resultsSize parameter
+
+RECOMMENDED FIX:
+Update the parameters to aggressively request more comments:
+- Set resultsLimit to a high value
+- Set maxScrolls to a high value
+- Add other pagination parameters
+"""
+
+# Test what the actual default is by running with no explicit limits
+test_no_limit = {
+    "directUrls": ["https://www.instagram.com/p/XXXXX/"],
+    # NO resultsLimit specified - see what default returns
+}
+
+test_high_scroll = {
+    "directUrls": ["https://www.instagram.com/p/XXXXX/"],
+    "resultsLimit": 1000,  # Request very high
+    "maxScrolls": 20,      # Scroll more
+}
+
+test_alternative = {
+    "directUrls": ["https://www.instagram.com/p/XXXXX/"],
+    "commentsLimit": 1000,  # Use alternative parameter
+    "maxScrolls": 20,
+}
