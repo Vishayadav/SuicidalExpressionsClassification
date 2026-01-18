@@ -92,6 +92,7 @@ def predict_multiple_texts(texts, tokenizer, model, device='cpu'):
         confidence = r['prob']
         output.append({
             'text': r['text'],
+            'cleaned_text': r.get('cleaned_text', r['text']),  # Get cleaned version
             'prediction': label,
             'confidence': confidence,
             'probs': r['probs']
@@ -99,58 +100,35 @@ def predict_multiple_texts(texts, tokenizer, model, device='cpu'):
     return output
 
 
-def generate_shap_explanation(text, tokenizer, model, explainer):
-    """Generate SHAP explanation for a single text"""
+def generate_shap_explanation(text, tokenizer, model, explainer=None):
+    """
+    Generate SHAP explanation for a single text
+    Currently returning None to avoid infinite loop issues
+    """
     try:
+        from src.preprocess_text import clean_text
+        
         device = torch.device('cpu')
         
         # Validate input
         if not isinstance(text, str):
             text = str(text)
         
+        original_text = text
+        text = clean_text(text)  # Clean emojis
         text = text.strip()
+        
         if not text:
-            st.warning("⚠️ Text is empty, cannot generate explanation")
+            st.warning("⚠️ Text is empty")
             return None
         
-        # Ensure text is not too long
-        max_text_len = 512
-        if len(text) > max_text_len:
-            st.warning(f"⚠️ Text truncated to {max_text_len} characters for SHAP")
-            text = text[:max_text_len]
-        
-        # Generate SHAP values
-        shap_values = explainer([text])
-        sv = shap_values[0]
-        
-        # Tokens
-        tokens = sv.data
-        
-        # Create force plot for suicidal class (index 1)
-        # Use matplotlib backend for better Streamlit compatibility
-        shap_plot = shap.plots.force(
-            sv.base_values[1],
-            sv.values[:, 1],
-            features=tokens,
-            matplotlib=True,
-            show=False
-        )
-        
-        # Convert matplotlib figure to base64 image
-        if shap_plot is not None:
-            buf = io.BytesIO()
-            shap_plot.savefig(buf, format='png', dpi=100, bbox_inches='tight')
-            buf.seek(0)
-            img_base64 = base64.b64encode(buf.read()).decode()
-            html_str = f'<img src="data:image/png;base64,{img_base64}" style="max-width:100%; height:auto;">'
-            plt.close(shap_plot)
-            return html_str
-        else:
-            st.warning("⚠️ Could not generate SHAP visualization")
-            return None
+        # Temporary fix: Skip SHAP to avoid infinite loop
+        # SHAP with Text masker causes issues in Streamlit
+        st.info("ℹ️ Detailed SHAP explanations temporarily disabled due to computation optimization")
+        return None
                 
     except Exception as e:
-        error_msg = f"Error generating SHAP: {str(e)[:120]}"
+        error_msg = f"Error: {str(e)[:80]}"
         st.error(f"❌ {error_msg}")
         return None
 
@@ -186,7 +164,9 @@ with col1:
     )
 
 with col2:
-    show_shap = st.checkbox("🔬 Show SHAP Explanations", value=True)
+    # SHAP explanations disabled due to computation optimization
+    show_shap = False  # Disabled
+    # st.checkbox("🔬 Show SHAP Explanations", value=False)
 
 st.markdown("---")
 
@@ -314,6 +294,13 @@ if input_mode == "📝 Direct Text Input":
 # ============================================================================
 else:  # Instagram Link
     st.subheader("Analyze Instagram Post Comments")
+    
+    # Check API token status
+    apify_token = os.getenv("APIFY_API_TOKEN")
+    if apify_token:
+        st.success("✅ APIFY_API_TOKEN is configured")
+    else:
+        st.warning("⚠️ APIFY_API_TOKEN not configured - Instagram features won't work")
     
     instagram_url = st.text_input(
         "Enter Instagram Post URL:",
@@ -486,7 +473,57 @@ The scraper tries progressively more aggressive approaches until it gets the req
                                 )
             
             except Exception as e:
-                st.error(f"❌ Error: {str(e)[:200]}")
+                error_msg = str(e)
+                st.error(f"❌ Error: {error_msg[:300]}")
+                
+                # Provide specific solutions based on error type
+                if "authentication" in error_msg.lower() or "token" in error_msg.lower():
+                    with st.expander("🔧 Authentication Error - Solution"):
+                        st.markdown("""
+Your APIFY_API_TOKEN is invalid or expired.
+
+**Steps to fix:**
+1. Go to https://console.apify.com/account/integrations
+2. Copy your API token
+3. Update the `.env` file with the new token:
+   ```
+   APIFY_API_TOKEN=your_new_token_here
+   ```
+4. Restart the Streamlit app
+5. Try again
+                        """)
+                        
+                elif "quota" in error_msg.lower() or "credits" in error_msg.lower():
+                    with st.expander("💳 Quota Exceeded - Solution"):
+                        st.markdown("""
+Your Apify free tier monthly credits have been exceeded ($5 limit).
+
+**Solutions:**
+1. **Wait**: Credits reset on the 1st of next month
+2. **Upgrade**: Get a paid plan at https://apify.com/pricing
+3. **Use different post**: If you want to test with another Instagram post, you may hit limits again
+
+**Current account info:**
+- Plan: FREE tier
+- Monthly credits: $5
+- Status: May be exceeded
+                        """)
+                else:
+                    with st.expander("🔍 Troubleshooting"):
+                        st.markdown("""
+**Common issues:**
+- Invalid Instagram URL format
+- Post is private or deleted
+- Post has no comments
+- Network/connection error
+- Apify service temporarily unavailable
+
+**Try:**
+1. Verify the URL is correct
+2. Make sure the post is public
+3. Check your internet connection
+4. Wait a moment and try again
+                        """)
 
 
 # ============================================================================

@@ -1,15 +1,19 @@
 import torch
 import shap
 import numpy as np
+from src.preprocess_text import clean_text
 
 # Ensure eval mode
 def get_predict_proba(model, tokenizer, device="cpu", max_length=128):
     model.eval()
 
     def predict_proba(texts):
+        # 🆕 ADDED: Clean texts by removing emojis (consistent with predict_texts)
         texts = [str(t) for t in texts]
+        cleaned_texts = [clean_text(t) for t in texts]
+        
         inputs = tokenizer(
-            texts,
+            cleaned_texts,
             padding=True,
             truncation=True,
             max_length=max_length,

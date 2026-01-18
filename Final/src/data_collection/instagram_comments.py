@@ -3,6 +3,7 @@ from apify_client import ApifyClient
 from dotenv import load_dotenv
 from pathlib import Path
 import logging
+import time
 
 # Setup logging
 logging.basicConfig(level=logging.DEBUG)
@@ -15,7 +16,7 @@ load_dotenv(dotenv_path=ENV_PATH)
 def fetch_comments(post_url: str, limit: int = 50, debug: bool = False):
     """
     Fetch comments from Instagram using Apify actor.
-    Uses aggressive scrolling and retries if needed.
+    Optimized for free tier with single attempt strategy.
     
     Args:
         post_url: Instagram post URL
@@ -31,58 +32,56 @@ def fetch_comments(post_url: str, limit: int = 50, debug: bool = False):
 
     client = ApifyClient(apify_token)
 
-    def run_scraper(max_scrolls: int, results_limit: int):
-        """Run the scraper with specified parameters"""
+    # FREE TIER OPTIMIZATION:
+    # - Only make ONE API call to avoid quota exhaustion
+    # - Use intelligent parameters that work best for free tier
+    # - Request more items than needed but make only 1 call
+    
+    if debug:
+        logger.info(f"🔍 Fetching {limit} comments (optimized for free tier)")
+        logger.info(f"   Target URL: {post_url}")
+
+    try:
+        # Single optimized attempt
         run_input = {
             "directUrls": [post_url],
-            "maxScrolls": max_scrolls,
-            "resultsLimit": results_limit,
+            "maxScrolls": 5,  # Moderate scrolling (free tier friendly)
+            "resultsLimit": limit * 2,  # Request 2x what we need
         }
         
         if debug:
-            logger.info(f"🔍 Running Apify with maxScrolls={max_scrolls}, resultsLimit={results_limit}")
+            logger.info(f"📊 Parameters: maxScrolls=5, resultsLimit={limit*2}")
 
         run = client.actor("apify/instagram-comment-scraper").call(run_input=run_input)
         
-        all_items = list(client.dataset(run["defaultDatasetId"]).iterate_items())
-        return all_items
-
-    # Try with increasingly aggressive parameters
-    attempts = [
-        {"max_scrolls": 10, "results_limit": limit * 2, "desc": "Moderate scrolling"},
-        {"max_scrolls": 20, "results_limit": limit * 3, "desc": "Aggressive scrolling"},
-        {"max_scrolls": 30, "results_limit": limit * 5, "desc": "Very aggressive scrolling"},
-    ]
-    
-    all_items = []
-    
-    for attempt in attempts:
         if debug:
-            logger.info(f"📊 Attempt: {attempt['desc']}")
+            logger.info(f"✅ Apify run completed: {run['id']}")
+
+        all_items = list(client.dataset(run["defaultDatasetId"]).iterate_items())
         
-        try:
-            all_items = run_scraper(attempt["max_scrolls"], attempt["results_limit"])
-            
-            if debug:
-                logger.info(f"✅ Got {len(all_items)} items from Apify")
-            
-            # If we got enough items, stop trying
-            valid_comments = [item for item in all_items 
-                            if (item.get("text") or item.get("comment") or item.get("message") or item.get("content") or item.get("commentText"))
-                            and isinstance((item.get("text") or item.get("comment") or item.get("message") or item.get("content") or item.get("commentText")), str)
-                            and (item.get("text") or item.get("comment") or item.get("message") or item.get("content") or item.get("commentText")).strip()]
-            
-            if len(valid_comments) >= limit:
-                if debug:
-                    logger.info(f"✅ Got {len(valid_comments)} valid comments - stopping attempts")
-                break
-            elif debug:
-                logger.info(f"⚠️ Only got {len(valid_comments)} valid comments, trying more aggressive approach...")
-                
-        except Exception as e:
-            if debug:
-                logger.error(f"❌ Attempt failed: {str(e)[:100]}")
-            continue
+        if debug:
+            logger.info(f"📈 Total items from Apify: {len(all_items)}")
+
+    except Exception as e:
+        error_msg = str(e)
+        if debug:
+            logger.error(f"❌ Apify error: {error_msg[:200]}")
+        
+        # Check for specific error types
+        if "authentication" in error_msg.lower() or "token" in error_msg.lower():
+            raise RuntimeError(
+                f"Authentication failed: Your APIFY_API_TOKEN appears to be invalid or expired.\n"
+                f"Error: {error_msg}\n"
+                f"Solution: Get a new token from https://console.apify.com/account/integrations"
+            )
+        elif "quota" in error_msg.lower() or "credits" in error_msg.lower():
+            raise RuntimeError(
+                f"Quota exceeded: Your free tier monthly credits have been exceeded.\n"
+                f"Error: {error_msg}\n"
+                f"Solution: Wait for next month or upgrade your Apify plan"
+            )
+        else:
+            raise RuntimeError(f"Apify error: {error_msg}")
 
     comments = []
     collected_count = 0
@@ -130,6 +129,6 @@ def fetch_comments(post_url: str, limit: int = 50, debug: bool = False):
             skipped_empty += 1
 
     if debug:
-        logger.info(f"📈 Final: Total items from Apify: {len(all_items)}, Valid comments: {len(comments)}, Skipped (no text): {skipped_empty}")
+        logger.info(f"📈 Final: Total items: {len(all_items)}, Valid comments: {len(comments)}, Skipped: {skipped_empty}")
     
     return comments

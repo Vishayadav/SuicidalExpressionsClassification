@@ -8,7 +8,13 @@ import os
 # 🆕 ADDED (SHAP)
 import shap
 # from shap_utils import get_predict_proba, get_shap_explainer
+# from src.shap_utils import get_predict_proba, get_shap_explainer
+# from shap_utils import get_predict_proba, get_shap_explainer
+# from preprocess_text import clean_text
+
 from src.shap_utils import get_predict_proba, get_shap_explainer
+from src.preprocess_text import clean_text
+
 
 
 # --------- GLOBAL MODEL (for API / Apify usage) ----------
@@ -47,7 +53,10 @@ def get_model_and_tokenizer(
 
 
 def predict_texts(texts, tokenizer, model, max_length: int = 128, device='cpu'):
-    enc = tokenizer(texts, truncation=True, padding=True, max_length=max_length, return_tensors='pt')
+    # 🆕 ADDED: Clean texts by removing emojis
+    cleaned_texts = [clean_text(t) for t in texts]
+    
+    enc = tokenizer(cleaned_texts, truncation=True, padding=True, max_length=max_length, return_tensors='pt')
     input_ids = enc['input_ids'].to(device)
     attention_mask = enc['attention_mask'].to(device)
 
@@ -60,7 +69,8 @@ def predict_texts(texts, tokenizer, model, max_length: int = 128, device='cpu'):
     results = []
     for i in range(len(texts)):
         results.append({
-            'text': texts[i],
+            'text': texts[i],  # Keep original text in results
+            'cleaned_text': cleaned_texts[i],  # Also return cleaned version
             'pred': int(preds[i].item()),
             'prob': float(probs[i, preds[i]].item()),
             'probs': probs[i].tolist()
