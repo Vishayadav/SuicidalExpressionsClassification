@@ -57,10 +57,10 @@ transformers_cache/
 # ==============================
 processed.pt
 processed_test.pt
-model_test/model.safetensors
+# model_test/model.safetensors
 
 # Ignore entire trained model directory (optional but recommended)
-model_test/
+# model_test/
 
 # ==============================
 # Dataset safety (uncomment if needed)

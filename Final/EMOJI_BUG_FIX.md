@@ -1,14 +1,18 @@
 # 🔧 Emoji Classification Bug - FIXED
 
 ## Problem
+
 Model predictions were changing based on emoji presence:
+
 - ❌ "We love you NASA 💙🌊" → **SUICIDAL** (WRONG)
 - ✅ "We love you NASA" → **Non-Suicidal** (CORRECT)
 
 Same text, different predictions just because of emojis!
 
 ## Root Cause
-**Tokenization Issue**: 
+
+**Tokenization Issue**:
+
 1. Model was trained on text without emojis
 2. Emoji unicode characters were being tokenized as special tokens
 3. These tokens triggered false "suicidal" classification
@@ -17,6 +21,7 @@ Same text, different predictions just because of emojis!
 ## Solution Implemented
 
 ### New File: `src/preprocess_text.py`
+
 Created comprehensive text preprocessing module:
 
 ```python
@@ -34,18 +39,20 @@ def clean_text(text: str) -> str:
 ```
 
 ### Updated: `src/predict.py`
+
 ```python
 # Before
 def predict_texts(texts, ...):
     enc = tokenizer(texts, ...)  # Emojis included ❌
 
-# After  
+# After
 def predict_texts(texts, ...):
     cleaned_texts = [clean_text(t) for t in texts]  # Emojis removed ✅
     enc = tokenizer(cleaned_texts, ...)  # Only clean text to model
 ```
 
 ### Updated: `app.py`
+
 ```python
 # SHAP now uses cleaned text
 def generate_shap_explanation(text, ...):
@@ -57,6 +64,7 @@ def generate_shap_explanation(text, ...):
 ## Results
 
 ### Before Fix
+
 ```
 Text: "We love you NASA 💙🌊"
 Prediction: SUICIDAL ❌
@@ -64,6 +72,7 @@ Confidence: 65%
 ```
 
 ### After Fix
+
 ```
 Text: "We love you NASA 💙🌊"  (Original displayed)
 Processed: "We love you NASA"  (Clean version used by model)
@@ -74,12 +83,14 @@ Confidence: 95%
 ## Testing
 
 ### Run the test script
+
 ```bash
 cd Final/
 python test_emoji_fix.py
 ```
 
 Expected output:
+
 ```
 "We love you NASA 💙🌊" → NON-SUICIDAL ✅
 "Hello so beautiful 💙💙" → NON-SUICIDAL ✅
@@ -105,11 +116,11 @@ Display Original Text + Correct Prediction
 
 ## Files Changed
 
-| File | Change |
-|------|--------|
-| `src/preprocess_text.py` | NEW - Text preprocessing |
-| `src/predict.py` | Use clean_text() before tokenization |
-| `app.py` | Clean text in SHAP function |
+| File                     | Change                               |
+| ------------------------ | ------------------------------------ |
+| `src/preprocess_text.py` | NEW - Text preprocessing             |
+| `src/predict.py`         | Use clean_text() before tokenization |
+| `app.py`                 | Clean text in SHAP function          |
 
 ## Key Features
 
@@ -117,20 +128,21 @@ Display Original Text + Correct Prediction
 ✅ **Comprehensive Emoji Removal**: Handles all Unicode emoji ranges  
 ✅ **Backward Compatible**: Works with existing code  
 ✅ **Consistent**: Both SHAP and predictions use same cleaning  
-✅ **Fast**: Minimal performance impact  
+✅ **Fast**: Minimal performance impact
 
 ## Examples of Fixed Cases
 
-| Input | Old Prediction | New Prediction |
-|-------|----------------|----------------|
-| "We love you NASA 💙🌊" | SUICIDAL ❌ | NON-SUICIDAL ✅ |
-| "Hello so beautiful 💙💙" | SUICIDAL ❌ | NON-SUICIDAL ✅ |
-| "Great day! 😊😊" | SUICIDAL ❌ | NON-SUICIDAL ✅ |
-| "I want to die 😢" | SUICIDAL ✅ | SUICIDAL ✅ |
+| Input                     | Old Prediction | New Prediction  |
+| ------------------------- | -------------- | --------------- |
+| "We love you NASA 💙🌊"   | SUICIDAL ❌    | NON-SUICIDAL ✅ |
+| "Hello so beautiful 💙💙" | SUICIDAL ❌    | NON-SUICIDAL ✅ |
+| "Great day! 😊😊"         | SUICIDAL ❌    | NON-SUICIDAL ✅ |
+| "I want to die 😢"        | SUICIDAL ✅    | SUICIDAL ✅     |
 
 ## Technical Details
 
 ### Emoji Unicode Ranges Handled
+
 - U+1F600-U+1F64F: Emoticons
 - U+1F300-U+1F5FF: Symbols & pictographs
 - U+1F680-U+1F6FF: Transport & map
@@ -138,17 +150,20 @@ Display Original Text + Correct Prediction
 - And many more...
 
 ### Preprocessing Steps
+
 1. **Emoji Removal**: Regex-based removal of emoji characters
 2. **Whitespace Normalization**: Remove extra spaces
 3. **URL Removal**: Remove links (often in spam)
 4. **Punctuation Normalization**: Handle repeated punctuation
 
 ## Performance Impact
+
 - **Speed**: Negligible (preprocessing is fast)
 - **Accuracy**: Significantly improved (removes false positives)
 - **Transparency**: Original text still displayed to users
 
 ## Future Improvements
+
 1. Could add sentiment emoji conversion (😊 → "happy")
 2. Could track emoji information separately
 3. Could add emoji-specific warning (if relevant)
